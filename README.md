@@ -1,6 +1,11 @@
 # SwiftPrompt
 
-Swift based prompt script.
+Prompt script built using Swift. 
+
+It provides below information:
+* user login
+* host ip address
+* git status
 
 # Usage
 

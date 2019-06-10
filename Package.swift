@@ -7,6 +7,7 @@ let package = Package(
     name: "SwiftPrompt",
     products: [
         .executable(name: "swift_prompt", targets: ["SwiftPrompt"]),
+        .executable(name: "swift_prompt_nanny", targets: ["SwiftPromptNanny"])
     ],
     dependencies: [
          .package(url: "https://github.com/hanjoes/Termbo", from: "0.1.0"),
@@ -16,6 +17,9 @@ let package = Package(
         .target(
             name: "SwiftPrompt",
             dependencies: ["Termbo", "SwiftGitLib"]),
+        .target(
+            name: "SwiftPromptNanny",
+            dependencies: ["SwiftGitLib"]),
         .testTarget(
             name: "SwiftPromptTests",
             dependencies: ["SwiftPrompt"]),

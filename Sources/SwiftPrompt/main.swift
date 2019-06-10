@@ -1,4 +1,5 @@
 import SwiftGitLib
+import SwiftPawn
 import Termbo
 
 #if os(Linux)
@@ -87,6 +88,13 @@ func main() throws {
         return
     }
     
+    // run nanny for logistics
+    let selfPath = CommandLine.arguments[0]
+    let pathElems = selfPath.split(separator: "/")
+    let selfPathDir = pathElems.count == 0 ? "./" : String(pathElems.dropLast().joined(separator: "/"))
+    let nannyPath = "\(selfPathDir)/swift_prompt_nanny"
+    _ = try SwiftPawn.execute(command: nannyPath, arguments: [])
+    
     // login, branch, modified state, host
     
     let login = String(cString: &buffer)
@@ -115,8 +123,12 @@ func main() throws {
     
     let host = try getHostName()
     
-    print("\(Colors.Yellow)\(login)\(Colors.Reset)@\(Colors.Red)\(host)\(Colors.Reset)"
-        + " \(state.graphicsMode)(\(asterisk)\(branch)\(state.glyph))\(Colors.Reset) >")
+    
+    let PS1 = "\(Colors.Yellow)\(login)\(Colors.Reset)@\(Colors.Red)\(host)\(Colors.Reset)"
+        + " \(state.graphicsMode)(\(asterisk)\(branch)\(state.glyph))\(Colors.Reset) >"
+    var t = Termbo.init(width: PS1.count, height: 1)
+    t.render(bitmap: [PS1], to: stdout)
+    t.end()
 }
 
 func getHostName() throws -> String {
