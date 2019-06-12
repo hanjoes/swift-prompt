@@ -1,0 +1,43 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "SwiftDaemon",
+        "repositoryURL": "https://github.com/hanjoes/swift-daemon",
+        "state": {
+          "branch": null,
+          "revision": "128ae0aff6756f1936db0ef249bed86847719e1f",
+          "version": "1.0.1"
+        }
+      },
+      {
+        "package": "SwiftGit",
+        "repositoryURL": "https://github.com/hanjoes/swift-git",
+        "state": {
+          "branch": null,
+          "revision": "2fcb3fba230c4af14af0094b47b318d43247c9d1",
+          "version": "1.2.1"
+        }
+      },
+      {
+        "package": "SwiftPawn",
+        "repositoryURL": "https://github.com/hanjoes/swift-pawn",
+        "state": {
+          "branch": null,
+          "revision": "873858b96dee1d8d9442171efdc25d3ee3d953c1",
+          "version": "0.3.0"
+        }
+      },
+      {
+        "package": "Termbo",
+        "repositoryURL": "https://github.com/hanjoes/Termbo",
+        "state": {
+          "branch": null,
+          "revision": "9e52a05b80551ecda1a4bd496087cda043d52ced",
+          "version": "0.1.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

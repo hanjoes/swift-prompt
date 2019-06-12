@@ -3,11 +3,11 @@ import class Foundation.Bundle
 import XCTest
 
 final class SwiftPromptTests: XCTestCase {
-    func testExample() throws {
-        print(Glyphs.Cross)
-    }
+  func testExample() throws {
+    print(Glyphs.Cross)
+  } r
 
-    static var allTests = [
-        ("testExample", testExample),
-    ]
+  static var allTests = [
+    ("testExample", testExample),
+  ]
 }
