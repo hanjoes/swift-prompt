@@ -35,9 +35,28 @@ func main() throws {
 
   let ttyName = out.trimmed()
   let lockFile = "SwiftPromptNanny_\(ttyName)"
-  print(lockFile)
 
-  SwiftDaemon.daemonize(inDir: "/tmp") {}
+  SwiftDaemon.daemonize(inDir: "/tmp") {
+    var fl = flock()
+    fl.l_len = 0
+    fl.l_start = 0
+    fl.l_whence = Int16(SEEK_SET)
+    fl.l_type = Int16(F_WRLCK)
+    fl.l_pid = getpid()
+
+    let lkfd = open(lockFile, O_WRONLY)
+    defer { close(lkfd) }
+    var ret = fcntl(lkfd, F_SETLK, &fl)
+    if ret != 0 {
+      exit(EXIT_FAILURE)
+    }
+
+    for _ in 1...10 {
+      sleep(2)
+    }
+
+    // lock will be release when lfd got closed
+  }
 }
 
 try main()
