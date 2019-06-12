@@ -27,7 +27,8 @@ private extension String {
 // MARK: -
 
 func main() throws {
-  let (status, out, _) = try SwiftPawn.execute(command: "tty", arguments: ["tty"])
+  let (status, out, _) = try SwiftPawn.execute(command: "tty",
+                                               arguments: ["tty"])
   if status != 0 {
     exit(EXIT_FAILURE)
   }
