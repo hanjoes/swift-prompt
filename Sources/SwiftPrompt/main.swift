@@ -1,5 +1,6 @@
 import SwiftGitLib
 import SwiftPawn
+import SwiftPromptLib
 import Termbo
 
 #if os(Linux)
@@ -107,7 +108,12 @@ func main() throws {
   let asterisk = try isRepo && Git.isModified(at: cwd) ? "*" : ""
 
   var state: State = .noRepo
-  if try acquiredLock() {
+  let lockf = getLockFileName()
+  let lkfd = acquiredLock(lockf: lockf)
+  if lkfd == -1 {
+    print("no lock")
+    state = .updating
+  } else {
     print("acauired lock")
 
     if isRepo {
@@ -120,9 +126,7 @@ func main() throws {
         state = .upToDate
       }
     }
-  } else {
-    print("no lock")
-    state = .updating
+    releaseLock(lkfd)
   }
 
   let host = try getHostName()
@@ -145,7 +149,7 @@ func main() throws {
   print(nannyPath)
 
   _ = try SwiftPawn.execute(command: nannyPath,
-                            arguments: ["swift_prompt_nanny"])
+                            arguments: ["swift_prompt_nanny", lockf])
 }
 
 func getHostName() throws -> String {
@@ -163,61 +167,6 @@ func getHostName() throws -> String {
     }
   }
   return hn
-}
-
-private extension String {
-  func trimmed() -> String {
-    var result = self
-    while result.last?.isWhitespace == true {
-      result = String(result.dropLast())
-    }
-
-    while result.first?.isWhitespace == true {
-      result = String(result.dropFirst())
-    }
-
-    return result
-  }
-}
-
-func getLockFileName() throws -> String {
-  let (status, out, _) = try SwiftPawn.execute(command: "tty",
-                                               arguments: ["tty"])
-  if status != 0 {
-    exit(EXIT_FAILURE)
-  }
-
-  let ttyName = out.trimmed()
-  let converted = ttyName.split(separator: "/").joined(separator: "_")
-  let lockFile = "SwiftPromptNanny_\(converted)"
-  return lockFile
-}
-
-func acquiredLock() throws -> Bool {
-  let lkfd = open("/tmp/\(try getLockFileName())", O_RDWR|O_CREAT, 0o644)
-  if lkfd == -1 {
-    return false
-  }
-  defer { close(lkfd) }
-  let flags = fcntl(lkfd, F_GETFL, 0)
-  print(lkfd)
-
-  var ret = fcntl(lkfd, F_SETFL, flags | O_NONBLOCK)
-  if ret != 0 {
-    return false
-  }
-
-  var fl = flock()
-  fl.l_len = 0
-  fl.l_start = 0
-  fl.l_whence = Int16(SEEK_SET)
-  fl.l_type = Int16(F_WRLCK)
-  fl.l_pid = getpid()
-  ret = fcntl(lkfd, F_SETLK, &fl)
-  if ret != 0 {
-    return false
-  }
-  return true
 }
 
 try main()

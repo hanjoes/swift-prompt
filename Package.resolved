@@ -3,11 +3,11 @@
     "pins": [
       {
         "package": "SwiftDaemon",
-        "repositoryURL": "https://github.com/hanjoes/swift-daemon",
+        "repositoryURL": "/Users/hanzhos/Documents/github/swift-daemon",
         "state": {
-          "branch": null,
-          "revision": "128ae0aff6756f1936db0ef249bed86847719e1f",
-          "version": "1.0.1"
+          "branch": "localdev",
+          "revision": "6cbe06bf7c1493d48f3bebd14f7ec5d83b4f159e",
+          "version": null
         }
       },
       {

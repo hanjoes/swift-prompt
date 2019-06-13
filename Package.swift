@@ -16,15 +16,15 @@ let package = Package(
   targets: [
     .target(
       name: "SwiftPrompt",
-      dependencies: ["Termbo", "SwiftGitLib"]
+      dependencies: ["Termbo", "SwiftPromptLib"]
     ),
     .target(
       name: "SwiftPromptNanny",
-      dependencies: ["SwiftGitLib", "SwiftDaemonLib"]
+      dependencies: ["SwiftPromptLib", "SwiftDaemonLib"]
     ),
-    .testTarget(
-      name: "SwiftPromptTests",
-      dependencies: ["SwiftPrompt"]
+    .target(
+      name: "SwiftPromptLib",
+      dependencies: ["SwiftGitLib"]
     ),
   ]
 )
