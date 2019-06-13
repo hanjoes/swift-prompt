@@ -37,6 +37,7 @@ enum State {
   case upToDate
   case newer
   case older
+  case updating
 
   var graphicsMode: String {
     switch self {
@@ -49,7 +50,10 @@ enum State {
     case .newer:
       return Colors.Cyan
     case .older:
-      return EscapeSequence.graphicsModeOn([40, 37]).description // black bg, white fg
+      // black bg, white fg
+      return EscapeSequence.graphicsModeOn([40, 37]).description
+    case .updating:
+      return Colors.Blink.description
     }
   }
 
@@ -63,7 +67,7 @@ enum State {
       return " " + Glyphs.Check
     case .newer:
       return " " + Glyphs.Up
-    case .older:
+    case .older, .updating:
       return " " + Glyphs.Cross
     }
   }
@@ -88,13 +92,6 @@ func main() throws {
     return
   }
 
-  // run nanny for logistics
-  let selfPath = CommandLine.arguments[0]
-  let pathElems = selfPath.split(separator: "/")
-  let selfPathDir = pathElems.count == 0 ? "./" : String(pathElems.dropLast().joined(separator: "/"))
-  let nannyPath = "\(selfPathDir)/swift_prompt_nanny"
-  _ = try SwiftPawn.execute(command: nannyPath, arguments: [])
-
   // login, branch, modified state, host
 
   let login = String(cString: &buffer)
@@ -110,24 +107,45 @@ func main() throws {
   let asterisk = try isRepo && Git.isModified(at: cwd) ? "*" : ""
 
   var state: State = .noRepo
-  if isRepo {
-    let diff = try Git.compare("HEAD", "origin/\(branch)", at: cwd)
-    if diff > 0 {
-      state = .newer
-    } else if diff < 0 {
-      state = .older
-    } else {
-      state = .upToDate
+  if try acquiredLock() {
+    print("acauired lock")
+
+    if isRepo {
+      let diff = try Git.compare("HEAD", "origin/\(branch)", at: cwd)
+      if diff > 0 {
+        state = .newer
+      } else if diff < 0 {
+        state = .older
+      } else {
+        state = .upToDate
+      }
     }
+  } else {
+    print("no lock")
+    state = .updating
   }
 
   let host = try getHostName()
 
-  let PS1 = "\(Colors.Yellow)\(login)\(Colors.Reset)@\(Colors.Red)\(host)\(Colors.Reset)"
-    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)\(state.glyph)\(state.graphicsMode))\(Colors.Reset) >"
+  let PS1 = "\(Colors.Yellow)\(login)\(Colors.Reset)"
+    + "@\(Colors.Red)\(host)\(Colors.Reset)"
+    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)"
+    + "\(state.glyph)\(state.graphicsMode))\(Colors.Reset) >"
   var t = Termbo(width: PS1.count, height: 1)
   t.render(bitmap: [PS1], to: stdout)
   t.end()
+
+  // run nanny for logistics
+
+  let selfPath = CommandLine.arguments[0]
+  let pathElems = selfPath.split(separator: "/")
+  let selfPathDir = pathElems.count == 0 ? "./" : String(pathElems.dropLast()
+    .joined(separator: "/"))
+  let nannyPath = "\(selfPathDir)/swift_prompt_nanny"
+  print(nannyPath)
+
+  _ = try SwiftPawn.execute(command: nannyPath,
+                            arguments: ["swift_prompt_nanny"])
 }
 
 func getHostName() throws -> String {
@@ -137,14 +155,69 @@ func getHostName() throws -> String {
   let he = gethostbyname(hn)
   if he != nil {
     let addrPtr = he!.pointee.h_addr_list[0]
+    let addrSize = MemoryLayout<in_addr>.size
     while addrPtr != nil {
-      let inaddr = addrPtr!.withMemoryRebound(to: in_addr.self, capacity: MemoryLayout<in_addr>.size) {
-        $0
-      }
+      let inaddr = addrPtr!.withMemoryRebound(to: in_addr.self,
+                                              capacity: addrSize) { $0 }
       return String(cString: inet_ntoa(inaddr.pointee))
     }
   }
   return hn
+}
+
+private extension String {
+  func trimmed() -> String {
+    var result = self
+    while result.last?.isWhitespace == true {
+      result = String(result.dropLast())
+    }
+
+    while result.first?.isWhitespace == true {
+      result = String(result.dropFirst())
+    }
+
+    return result
+  }
+}
+
+func getLockFileName() throws -> String {
+  let (status, out, _) = try SwiftPawn.execute(command: "tty",
+                                               arguments: ["tty"])
+  if status != 0 {
+    exit(EXIT_FAILURE)
+  }
+
+  let ttyName = out.trimmed()
+  let converted = ttyName.split(separator: "/").joined(separator: "_")
+  let lockFile = "SwiftPromptNanny_\(converted)"
+  return lockFile
+}
+
+func acquiredLock() throws -> Bool {
+  let lkfd = open("/tmp/\(try getLockFileName())", O_RDWR|O_CREAT, 0o644)
+  if lkfd == -1 {
+    return false
+  }
+  defer { close(lkfd) }
+  let flags = fcntl(lkfd, F_GETFL, 0)
+  print(lkfd)
+
+  var ret = fcntl(lkfd, F_SETFL, flags | O_NONBLOCK)
+  if ret != 0 {
+    return false
+  }
+
+  var fl = flock()
+  fl.l_len = 0
+  fl.l_start = 0
+  fl.l_whence = Int16(SEEK_SET)
+  fl.l_type = Int16(F_WRLCK)
+  fl.l_pid = getpid()
+  ret = fcntl(lkfd, F_SETLK, &fl)
+  if ret != 0 {
+    return false
+  }
+  return true
 }
 
 try main()

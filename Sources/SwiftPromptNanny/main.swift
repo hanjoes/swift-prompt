@@ -1,9 +1,7 @@
 #if os(Linux)
   import Glibc
 #else
-  import Darwin
-#endif
-
+  import Darwin #endif 
 import SwiftDaemonLib
 import SwiftPawn
 
@@ -34,7 +32,8 @@ func main() throws {
   }
 
   let ttyName = out.trimmed()
-  let lockFile = "SwiftPromptNanny_\(ttyName)"
+  let converted = ttyName.split(separator: "/").joined(separator: "_")
+  let lockFile = "SwiftPromptNanny_\(converted)"
 
   SwiftDaemon.daemonize(inDir: "/tmp") {
     var fl = flock()
@@ -44,7 +43,7 @@ func main() throws {
     fl.l_type = Int16(F_WRLCK)
     fl.l_pid = getpid()
 
-    let lkfd = open(lockFile, O_WRONLY)
+    let lkfd = open(lockFile, O_RDWR|O_CREAT, 0o644)
     defer { close(lkfd) }
     var ret = fcntl(lkfd, F_SETLK, &fl)
     if ret != 0 {
