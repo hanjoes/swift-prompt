@@ -98,26 +98,21 @@ func main() throws {
   let login = String(cString: &buffer)
 
   var branch = "no repository"
-  let isRepo = Git.isRepo(at: cwd)
+  let isRepo = SwiftGit.isRepo(at: cwd)
   if isRepo {
-    if let branchName = try Git.branchName(at: cwd) {
+    if let branchName = try SwiftGit.branchName(at: cwd) {
       branch = branchName
     }
   }
-
-  let asterisk = try isRepo && Git.isModified(at: cwd) ? "*" : ""
 
   var state: State = .noRepo
   let lockf = getLockFileName()
   let lkfd = acquiredLock(lockf: lockf)
   if lkfd == -1 {
-    print("no lock")
     state = .updating
   } else {
-    print("acauired lock")
-
     if isRepo {
-      let diff = try Git.compare("HEAD", "origin/\(branch)", at: cwd)
+      let diff = try SwiftGit.compare("HEAD", "origin/\(branch)", at: cwd)
       if diff > 0 {
         state = .newer
       } else if diff < 0 {
@@ -131,13 +126,34 @@ func main() throws {
 
   let host = try getHostName()
 
-  let PS1 = "\(Colors.Yellow)\(login)\(Colors.Reset)"
-    + "@\(Colors.Red)\(host)\(Colors.Reset)"
-    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)"
-    + "\(state.glyph)\(state.graphicsMode))\(Colors.Reset) >"
-  var t = Termbo(width: PS1.count, height: 1)
-  t.render(bitmap: [PS1], to: stdout)
+  let asterisk = try isRepo && SwiftGit.isModified(at: cwd) ? "*" : ""
+  var prompt = getPrompt(login, host, branch, state, asterisk)
+  var t = Termbo(width: prompt.count, height: 1)
+  t.render(bitmap: [prompt], to: stdout)
+  
+  if state == .updating {
+    _ = try SwiftPawn.execute(command: "stty",
+                              arguments: ["stty", "-echo", "-isig"])
+    defer {
+      _ = try! SwiftPawn.execute(command: "stty",
+                                 arguments: ["stty", "sane"])
+    }
+    while true {
+      let c = getchar()
+      if c == 10 {
+        state = .unknown
+        break
+      }
+    }
+  }
+  prompt = getPrompt(login, host, branch, state, asterisk)
+  t.render(bitmap: [prompt], to: stdout)
   t.end()
+
+  let printable = "\(login)@\(host) (\(asterisk)\(branch) *) > "
+  print(EscapeSequence.cursorUp(1).description + 
+  EscapeSequence.cursorForward(printable.count).description)
+  
 
   // run nanny for logistics
 
@@ -145,12 +161,26 @@ func main() throws {
   let pathElems = selfPath.split(separator: "/")
   let selfPathDir = pathElems.count == 0 ? "./" : String(pathElems.dropLast()
     .joined(separator: "/"))
-  let nannyPath = "\(selfPathDir)/swift_prompt_nanny"
-  print(nannyPath)
+  var nannyPath = "\(selfPathDir)/swift_prompt_nanny"
+  if selfPath.starts(with: "/") {
+    nannyPath = "/" + nannyPath
+  }
 
   _ = try SwiftPawn.execute(command: nannyPath,
-                            arguments: ["swift_prompt_nanny", lockf])
+                            arguments: ["swift_prompt_nanny", lockf, cwd])
 }
+
+func getPrompt(_ login: String, _ host: String, _ branch: String,
+               _ state: State, _ asterisk: String) -> String {
+  return "\(Colors.Yellow)\(login)\(Colors.Reset)"
+    + "@\(Colors.Red)\(host)\(Colors.Reset)"
+    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)"
+    + "\(state.glyph)\(state.graphicsMode))\(Colors.Reset) > "
+}
+
+func renderPrompt(_: String, _: String,
+                  _: String, _: Bool,
+                  _: State) {}
 
 func getHostName() throws -> String {
   var buffer = [Int8](repeating: 0, count: C.BufferSize)
