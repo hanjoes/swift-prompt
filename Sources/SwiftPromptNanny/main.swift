@@ -37,12 +37,9 @@ func main() {
 
     let currentTime = time(nil)
 
-    // update every 5 seconds
-    if currentTime - storedTime > 5 {
-      for _ in 1 ... 5 {
-        sleep(1)
-      }
-      // do { try SwiftGit.fetchRepo(at: dir) } catch {}
+    // update every 10 seconds
+    if currentTime - storedTime > 10 {
+      do { try SwiftGit.fetchRepo(at: dir) } catch {}
       let curTimeStr = "\(currentTime)"
       lseek(lkfd, 0, SEEK_SET)
       write(lkfd, curTimeStr, curTimeStr.count)
