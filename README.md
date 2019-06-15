@@ -27,3 +27,8 @@ PS1 = "> " # or your favourate prompt script.
 # Demo
 
 ![Quick Demo](./swift_prompt_demo.gif)
+
+# Note for Future Me
+
+- Use signal to automatically hand back control to shell.
+- Easier installation.

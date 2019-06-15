@@ -61,7 +61,7 @@ enum State {
   var glyph: String {
     switch self {
     case .noRepo:
-      return ""
+      return " " + Glyphs.Cross
     case .unknown:
       return " " + Glyphs.Question
     case .upToDate:
@@ -161,49 +161,52 @@ func main() throws {
   // each prompt script is executed once and
   var t = Termbo(width: 100, height: 1)
 
-  var lkfd = acquiredLock(lockf: lockf)
-  if lkfd == -1 {
-    state = .updating
-    prompt = getPrompt(login, host, branch, state, asterisk)
-    t.render(bitmap: [prompt], to: stdout)
-    _ = try SwiftPawn.execute(command: "stty",
-                              arguments: ["stty", "-isig", "-echo", "-icanon"])
-    defer { _ = try! SwiftPawn.execute(command: "stty",
-                                       arguments: ["stty", "sane"]) }
-    while true {
-      let c = getchar()
-      if c == 10 {
-        break
-      }
-    }
-
-    lkfd = acquiredLock(lockf: lockf)
+  if isRepo {
+    var lkfd = acquiredLock(lockf: lockf)
     if lkfd == -1 {
-      state = .unknown
+      state = .updating
+      prompt = getPrompt(login, host, branch, state, asterisk)
+      t.render(bitmap: [prompt], to: stdout)
+      _ = try SwiftPawn.execute(command: "stty",
+                                arguments: ["stty", "-isig",
+                                            "-echo", "-icanon"])
+      defer { _ = try! SwiftPawn.execute(command: "stty",
+                                         arguments: ["stty", "sane"]) }
+      while true {
+        let c = getchar()
+        if c == 10 {
+          break
+        }
+      }
+
+      lkfd = acquiredLock(lockf: lockf)
+      if lkfd == -1 {
+        state = .unknown
+      } else {
+        state = try getDiff(cwd, isRepo, branch)
+      }
     } else {
       state = try getDiff(cwd, isRepo, branch)
     }
-  } else {
-    state = try getDiff(cwd, isRepo, branch)
+    prompt = getPrompt(login, host, branch, state, asterisk)
+
+    // run nanny for logistics
+
+    let selfPath = CommandLine.arguments[0]
+    let pathElems = selfPath.split(separator: "/")
+    let selfPathDir = pathElems.count == 0 ? "./" : String(pathElems.dropLast()
+      .joined(separator: "/"))
+    var nannyPath = "\(selfPathDir)/swift_prompt_nanny"
+    if selfPath.starts(with: "/") {
+      nannyPath = "/" + nannyPath
+    }
+
+    _ = try SwiftPawn.execute(command: nannyPath,
+                              arguments: ["swift_prompt_nanny", lockf, cwd])
+    releaseLock(lkfd)
   }
-  prompt = getPrompt(login, host, branch, state, asterisk)
 
   t.end(withBitmap: [prompt], terminator: "\n", to: stdout)
-  releaseLock(lkfd)
-
-  // run nanny for logistics
-
-  let selfPath = CommandLine.arguments[0]
-  let pathElems = selfPath.split(separator: "/")
-  let selfPathDir = pathElems.count == 0 ? "./" : String(pathElems.dropLast()
-    .joined(separator: "/"))
-  var nannyPath = "\(selfPathDir)/swift_prompt_nanny"
-  if selfPath.starts(with: "/") {
-    nannyPath = "/" + nannyPath
-  }
-
-  _ = try SwiftPawn.execute(command: nannyPath,
-                            arguments: ["swift_prompt_nanny", lockf, cwd])
 }
 
 try main()
