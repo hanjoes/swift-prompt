@@ -10,7 +10,7 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/hanjoes/Termbo", from: "0.1.0"),
-    .package(url: "https://github.com/hanjoes/swift-git", from: "1.1.0"),
+    .package(url: "https://github.com/hanjoes/swift-git", from: "1.3.4"),
     .package(url: "https://github.com/hanjoes/swift-daemon", from: "1.0.0"),
   ],
   targets: [
