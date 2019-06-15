@@ -11,7 +11,7 @@ import Termbo
 
 // MARK: - Colors
 
-struct Colors {
+public struct Colors {
   static let Red = EscapeSequence.graphicsModeOn([31]).description
   static let Green = EscapeSequence.graphicsModeOn([32]).description
   static let Yellow = EscapeSequence.graphicsModeOn([33]).description
@@ -54,7 +54,7 @@ enum State {
       // black bg, white fg
       return EscapeSequence.graphicsModeOn([40, 37]).description
     case .updating:
-      return Colors.Blink.description
+      return ""
     }
   }
 
@@ -68,8 +68,10 @@ enum State {
       return " " + Glyphs.Check
     case .newer:
       return " " + Glyphs.Up
-    case .older, .updating:
+    case .older:
       return " " + Glyphs.Cross
+    case .updating:
+      return " " + Colors.Blink + Glyphs.Question
     }
   }
 }
@@ -78,6 +80,49 @@ enum State {
 
 struct C {
   static let BufferSize = 4096
+}
+
+func getPrompt(_ login: String, _ host: String, _ branch: String,
+               _ state: State, _ asterisk: String) -> String {
+  return "\(Colors.Yellow)\(login)\(Colors.Reset)"
+    + "@\(Colors.Red)\(host)\(Colors.Reset)"
+    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)"
+    + "\(state.glyph)\(state.graphicsMode))\(Colors.Reset)"
+}
+
+func renderPrompt(_: String, _: String,
+                  _: String, _: Bool,
+                  _: State) {}
+
+func getHostName() throws -> String {
+  var buffer = [Int8](repeating: 0, count: C.BufferSize)
+  gethostname(&buffer, C.BufferSize)
+  let hn = String(cString: &buffer)
+  let he = gethostbyname(hn)
+  if he != nil {
+    let addrPtr = he!.pointee.h_addr_list[0]
+    let addrSize = MemoryLayout<in_addr>.size
+    while addrPtr != nil {
+      let inaddr = addrPtr!.withMemoryRebound(to: in_addr.self,
+                                              capacity: addrSize) { $0 }
+      return String(cString: inet_ntoa(inaddr.pointee))
+    }
+  }
+  return hn
+}
+
+func getDiff(_ dir: String, _ isRepo: Bool, _ branch: String) throws -> State {
+  if isRepo {
+    let diff = try SwiftGit.compare("HEAD", "origin/\(branch)", at: dir)
+    if diff > 0 {
+      return .newer
+    } else if diff < 0 {
+      return .older
+    } else {
+      return .upToDate
+    }
+  }
+  return .unknown
 }
 
 // MARK: - main
@@ -107,53 +152,44 @@ func main() throws {
 
   var state: State = .noRepo
   let lockf = getLockFileName()
-  let lkfd = acquiredLock(lockf: lockf)
-  if lkfd == -1 {
-    state = .updating
-  } else {
-    if isRepo {
-      let diff = try SwiftGit.compare("HEAD", "origin/\(branch)", at: cwd)
-      if diff > 0 {
-        state = .newer
-      } else if diff < 0 {
-        state = .older
-      } else {
-        state = .upToDate
-      }
-    }
-    releaseLock(lkfd)
-  }
 
   let host = try getHostName()
-
   let asterisk = try isRepo && SwiftGit.isModified(at: cwd) ? "*" : ""
   var prompt = getPrompt(login, host, branch, state, asterisk)
-  var t = Termbo(width: prompt.count, height: 1)
-  t.render(bitmap: [prompt], to: stdout)
-  
-  if state == .updating {
+
+  // assemble the prompt.
+  // each prompt script is executed once and
+  var t = Termbo(width: 100, height: 1)
+
+  var lkfd = acquiredLock(lockf: lockf)
+  if lkfd == -1 {
+    state = .updating
+    prompt = getPrompt(login, host, branch, state, asterisk)
+    t.render(bitmap: [prompt], to: stdout)
     _ = try SwiftPawn.execute(command: "stty",
-                              arguments: ["stty", "-echo", "-isig"])
-    defer {
-      _ = try! SwiftPawn.execute(command: "stty",
-                                 arguments: ["stty", "sane"])
-    }
+                              arguments: ["stty", "-isig", "-echo", "-icanon"])
+    defer { _ = try! SwiftPawn.execute(command: "stty",
+                                       arguments: ["stty", "sane"]) }
     while true {
       let c = getchar()
       if c == 10 {
-        state = .unknown
         break
       }
     }
+
+    lkfd = acquiredLock(lockf: lockf)
+    if lkfd == -1 {
+      state = .unknown
+    } else {
+      state = try getDiff(cwd, isRepo, branch)
+    }
+  } else {
+    state = try getDiff(cwd, isRepo, branch)
   }
   prompt = getPrompt(login, host, branch, state, asterisk)
-  t.render(bitmap: [prompt], to: stdout)
-  t.end()
 
-  let printable = "\(login)@\(host) (\(asterisk)\(branch) *) > "
-  print(EscapeSequence.cursorUp(1).description + 
-  EscapeSequence.cursorForward(printable.count).description)
-  
+  t.end(withBitmap: [prompt], terminator: "\n", to: stdout)
+  releaseLock(lkfd)
 
   // run nanny for logistics
 
@@ -168,35 +204,6 @@ func main() throws {
 
   _ = try SwiftPawn.execute(command: nannyPath,
                             arguments: ["swift_prompt_nanny", lockf, cwd])
-}
-
-func getPrompt(_ login: String, _ host: String, _ branch: String,
-               _ state: State, _ asterisk: String) -> String {
-  return "\(Colors.Yellow)\(login)\(Colors.Reset)"
-    + "@\(Colors.Red)\(host)\(Colors.Reset)"
-    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)"
-    + "\(state.glyph)\(state.graphicsMode))\(Colors.Reset) > "
-}
-
-func renderPrompt(_: String, _: String,
-                  _: String, _: Bool,
-                  _: State) {}
-
-func getHostName() throws -> String {
-  var buffer = [Int8](repeating: 0, count: C.BufferSize)
-  gethostname(&buffer, C.BufferSize)
-  let hn = String(cString: &buffer)
-  let he = gethostbyname(hn)
-  if he != nil {
-    let addrPtr = he!.pointee.h_addr_list[0]
-    let addrSize = MemoryLayout<in_addr>.size
-    while addrPtr != nil {
-      let inaddr = addrPtr!.withMemoryRebound(to: in_addr.self,
-                                              capacity: addrSize) { $0 }
-      return String(cString: inet_ntoa(inaddr.pointee))
-    }
-  }
-  return hn
 }
 
 try main()
