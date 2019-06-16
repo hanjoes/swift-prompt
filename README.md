@@ -27,7 +27,7 @@ PS1 = "> " # or your favourate prompt script.
 
 # Demo
 
-![Quick Demo](./swift_prompt_demo.gif)
+![Quick Demo](./prompt_demo.gif)
 
 # Note for Future Me
 
