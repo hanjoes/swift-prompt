@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/hanjoes/swift-git",
         "state": {
           "branch": null,
-          "revision": "c7b5db2215c5161c6880e24094dc133e37c8c554",
-          "version": "1.3.4"
+          "revision": "fec4d4b0cfade6512045861ec47bfdc73734409c",
+          "version": "1.3.5"
         }
       },
       {
@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/hanjoes/swift-pawn",
         "state": {
           "branch": null,
-          "revision": "a12563a4c575c5d080cd3673cb1bc09bfe8ca104",
-          "version": "1.0.0"
+          "revision": "728a0505a90da404d5b8b099e50b2d9857414edb",
+          "version": "1.0.2"
         }
       },
       {

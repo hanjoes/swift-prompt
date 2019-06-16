@@ -12,6 +12,7 @@ let package = Package(
     .package(url: "https://github.com/hanjoes/Termbo", from: "0.1.0"),
     .package(url: "https://github.com/hanjoes/swift-git", from: "1.3.5"),
     .package(url: "https://github.com/hanjoes/swift-daemon", from: "1.0.0"),
+    .package(url: "https://github.com/hanjoes/swift-pawn", from: "1.0.2"),
   ],
   targets: [
     .target(
