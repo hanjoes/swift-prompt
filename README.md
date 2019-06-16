@@ -11,6 +11,7 @@ It provides below information:
 * user login
 * host ip address
 * git status
+* whether we are tracking ("~" means we are tracking)
 
 ## Non-blocking
 The "swift_prompt_nanny" is a daemon meant for synchronizing your repository with remote. It kicks in every set amount of seconds (currently hard-coded 10s). Press "ENTER" to continue if you see a question mark blinking (shown in the demo below).

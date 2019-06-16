@@ -61,17 +61,17 @@ enum State {
   var glyph: String {
     switch self {
     case .noRepo:
-      return " " + Glyphs.Cross
+      return Glyphs.Cross
     case .unknown:
-      return " " + Glyphs.Question
+      return Glyphs.Question
     case .upToDate:
-      return " " + Glyphs.Check
+      return Glyphs.Check
     case .newer:
-      return " " + Glyphs.Up
+      return Glyphs.Up
     case .older:
-      return " " + Glyphs.Cross
+      return Glyphs.Cross
     case .updating:
-      return " " + Colors.Blink + Glyphs.Question
+      return Colors.Blink + Glyphs.Question
     }
   }
 }
@@ -83,10 +83,10 @@ struct C {
 }
 
 func getPrompt(_ login: String, _ host: String, _ branch: String,
-               _ state: State, _ asterisk: String) -> String {
+               _ state: State, _ asterisk: String, _ link: String) -> String {
   return "\(Colors.Yellow)\(login)\(Colors.Reset)"
     + "@\(Colors.Red)\(host)\(Colors.Reset)"
-    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)"
+    + " \(state.graphicsMode)(\(asterisk)\(branch)\(Colors.Reset)\(link)"
     + "\(state.glyph)\(state.graphicsMode))\(Colors.Reset)"
 }
 
@@ -142,11 +142,13 @@ func main() throws {
 
   let login = String(cString: &buffer)
 
+  var link = " "
   var branch = "no repository"
   let isRepo = SwiftGit.isRepo(at: cwd)
   if isRepo {
     if let branchName = try SwiftGit.branchName(at: cwd) {
       branch = branchName
+      link = " "
     }
   }
 
@@ -155,21 +157,23 @@ func main() throws {
 
   let host = try getHostName()
   let asterisk = try isRepo && SwiftGit.isModified(at: cwd) ? "*" : ""
-  var prompt = getPrompt(login, host, branch, state, asterisk)
+  var prompt = getPrompt(login, host, branch, state, asterisk, link)
 
   // assemble the prompt.
   // each prompt script is executed once and
   var t = Termbo(width: 100, height: 1)
 
   if isRepo {
+    let remote = SwiftGit.findTrackingRemote(at: cwd, branch: branch)
+    link = remote != nil ? "~" : " "
     var lkfd = acquiredLock(lockf: lockf)
     if lkfd == -1 {
       state = .updating
-      prompt = getPrompt(login, host, branch, state, asterisk)
+      prompt = getPrompt(login, host, branch, state, asterisk, link)
       t.render(bitmap: [prompt], to: stdout)
       _ = try SwiftPawn.execute(command: "stty",
-                                arguments: ["stty", "-isig",
-                                            "-echo", "-icanon"])
+                                arguments: 
+                                ["stty", "-isig", "-echo", "-icanon"])
       defer { _ = try! SwiftPawn.execute(command: "stty",
                                          arguments: ["stty", "sane"]) }
       while true {
@@ -183,12 +187,16 @@ func main() throws {
       if lkfd == -1 {
         state = .unknown
       } else {
-        state = try getDiff(cwd, isRepo, branch)
+        if remote != nil {
+          state = try getDiff(cwd, isRepo, branch)
+        }
       }
     } else {
-      state = try getDiff(cwd, isRepo, branch)
+        if remote != nil {
+          state = try getDiff(cwd, isRepo, branch)
+        }
     }
-    prompt = getPrompt(login, host, branch, state, asterisk)
+    prompt = getPrompt(login, host, branch, state, asterisk, link)
 
     // run nanny for logistics
 
