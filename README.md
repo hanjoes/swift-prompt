@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/hanjoes/swift-prompt.svg?branch=master)](https://travis-ci.org/hanjoes/swift-prompt)
+[![build Status](https://travis-ci.org/hanjoes/swift-prompt.svg?branch=master)](https://travis-ci.org/hanjoes/swift-prompt) [![language](https://img.shields.io/badge/langauge-swift5-brightgreen.svg)](https://swift.org/)
 
 # Swift Prompt
 
