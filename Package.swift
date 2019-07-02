@@ -9,7 +9,7 @@ let package = Package(
         .executable(name: "swift_prompt_nanny", targets: ["SwiftPromptNanny"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/hanjoes/Termbo", from: "0.1.0"),
+        .package(url: "https://github.com/hanjoes/swift-termina", from: "1.0.0"),
         .package(url: "https://github.com/hanjoes/swift-git", from: "2.0.0"),
         .package(url: "https://github.com/hanjoes/swift-daemon", from: "1.0.0"),
         .package(url: "https://github.com/hanjoes/swift-pawn", from: "1.0.2"),
@@ -17,7 +17,7 @@ let package = Package(
     targets: [
         .target(
             name: "SwiftPrompt",
-            dependencies: ["Termbo", "SwiftPromptLib"]
+            dependencies: ["TerminaLib", "SwiftPromptLib"]
         ),
         .target(
             name: "SwiftPromptNanny",

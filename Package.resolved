@@ -29,12 +29,12 @@
         }
       },
       {
-        "package": "Termbo",
-        "repositoryURL": "https://github.com/hanjoes/Termbo",
+        "package": "swift-termina",
+        "repositoryURL": "https://github.com/hanjoes/swift-termina",
         "state": {
           "branch": null,
-          "revision": "1e41df0c458706135d80f9e44214b9a55988204d",
-          "version": "0.1.2"
+          "revision": "d5e8ac8d6a43c95812b4d562a8dcc5e99a2b6338",
+          "version": "1.0.0"
         }
       }
     ]

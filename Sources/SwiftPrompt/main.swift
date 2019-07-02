@@ -1,7 +1,7 @@
 import SwiftGitLib
 import SwiftPawn
 import SwiftPromptLib
-import Termbo
+import TerminaLib
 
 #if os(Linux)
     import Glibc
@@ -166,7 +166,7 @@ func main() throws {
 
     // assemble the prompt.
     // each prompt script is executed once and
-    var t = Termbo(width: 100, height: 1)
+    var t = Termina(width: 100, height: 1)
 
     if isRepo {
         let (remote, _) = SwiftGit.tracked(at: cwd, branch: branch)
