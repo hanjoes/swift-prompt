@@ -203,6 +203,9 @@ func main() throws {
         }
         prompt = getPrompt(login, host, branch, state, asterisk, link)
 
+        // release lock before running nanny
+        releaseLock(lkfd)
+
         // run nanny for logistics
 
         let selfPath = CommandLine.arguments[0]
@@ -216,7 +219,6 @@ func main() throws {
 
         _ = try SwiftPawn.execute(command: nannyPath,
                                   arguments: ["swift_prompt_nanny", lockf, cwd])
-        releaseLock(lkfd)
     }
 
     t.end(withBitmap: [prompt], terminator: "\n", to: stdout)
